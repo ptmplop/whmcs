@@ -1,0 +1,41 @@
+version: "3.1"
+services:
+
+  database:
+    image: mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: $SQLPASSWD
+    volumes:
+      - db-persistent:/var/lib/mysql
+
+  php:
+    platform: linux/amd64
+    restart: unless-stopped
+    container_name: php_container
+    build:
+      context: ./build/php
+    working_dir: ${WEB_ROOT}
+    volumes:
+      - ./project:${WEB_ROOT}
+      - ./build/php/www.conf:/usr/local/etc/php-fpm.d/www.conf
+    environment:
+      - WEB_ROOT=${WEB_ROOT}
+
+  webserver:
+    restart: unless-stopped
+    image: httpd:2.4-alpine
+    depends_on:
+      - php
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./project:${WEB_ROOT}
+      - ./build/apache/httpd.conf:/usr/local/apache2/conf/httpd.conf
+      - ./build/apache/vhosts.conf:/usr/local/apache2/conf/extra/httpd-vhosts.conf
+    environment:
+      - WEB_ROOT=${WEB_ROOT}
+
+volumes:
+  db-persistent:
